@@ -88,7 +88,7 @@ function getEmitter() {
          * @returns {Object} this
          */
         several: function (event, context, handler, times) {
-            if (times <= 1) {
+            if (times <= 0) {
                 this.on(event, context, handler);
             } else {
                 events.push({ event, context, handler, times });
