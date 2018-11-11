@@ -14,7 +14,7 @@ function getEmitter() {
     let events = [];
 
     function isChildEvent(event, childEvent) {
-        return childEvent.startsWith(event) && !event.startsWith(childEvent);
+        return childEvent.startsWith(event) && childEvent[event.length] === '.';
     }
 
     function shouldCall(record) {
@@ -98,7 +98,7 @@ function getEmitter() {
          * @returns {Object} this
          */
         through: function (event, context, handler, frequency) {
-            if (frequency <= 1) {
+            if (frequency <= 0) {
                 this.on(event, context, handler);
             } else {
                 events.push({ event, context, handler, frequency, callCount: 0 });
