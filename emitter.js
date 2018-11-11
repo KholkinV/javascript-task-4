@@ -14,7 +14,15 @@ function getEmitter() {
     let events = [];
 
     function isChildEvent(event, childEvent) {
-        return childEvent.indexOf(event) === 0 && childEvent[event.length] === '.';
+        return childEvent.startsWith(event) && !event.startsWith(childEvent);
+    }
+
+    function shouldCall(record) {
+        record.times--;
+        record.callCount++;
+
+        return (!record.frequency || record.callCount % record.frequency === 1) &&
+            (!record.times || record.times > 0);
     }
 
     return {
@@ -39,10 +47,8 @@ function getEmitter() {
          * @returns {Object} this
          */
         off: function (event, context) {
-            events = events.filter(record => {
-                return !(record.context === context &&
-                    (event === record.event || isChildEvent(event, record.event)));
-            });
+            events = events.filter(record => !(record.context === context &&
+                (event === record.event || isChildEvent(event, record.event))));
 
             return this;
         },
@@ -53,27 +59,12 @@ function getEmitter() {
          * @returns {Object} this
          */
         emit: function (event) {
-            let records = events.filter(record => {
-                return (event === record.event || isChildEvent(record.event, event));
-            });
+            let records = events.filter(record => (event === record.event ||
+                isChildEvent(record.event, event)) && shouldCall(record));
 
-            records.forEach(record => {
-                record.times--;
-                record.callCount++;
-            });
+            records.sort((a, b) => b.event.split('.').length - a.event.split('.').length);
 
-            records = records.filter(record => {
-                return (!record.frequency || record.callCount % record.frequency === 1) &&
-                (!record.times || record.times > 0);
-            });
-
-            records.sort((a, b) => {
-                return a.event.split('.').length < b.event.split('.').length;
-            });
-
-            records.forEach(record => {
-                record.handler.call(record.context);
-            });
+            records.forEach(record => record.handler.call(record.context));
 
             return this;
         },
@@ -107,11 +98,10 @@ function getEmitter() {
          * @returns {Object} this
          */
         through: function (event, context, handler, frequency) {
-            let callCount = 0;
             if (frequency <= 1) {
                 this.on(event, context, handler);
             } else {
-                events.push({ event, context, handler, frequency, callCount });
+                events.push({ event, context, handler, frequency, callCount: 0 });
             }
 
             return this;
